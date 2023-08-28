@@ -538,7 +538,7 @@ function valid_pawn_move(move) {
 
 create_squares();
 load_fen(startpos);
-let moves = ["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "f8c5"];
-for (let move of moves) {
-    make_move(move);
-}
+// let moves = ["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "f8c5"];
+// for (let move of moves) {
+//     make_move(move);
+// }
