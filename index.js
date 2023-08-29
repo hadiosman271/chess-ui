@@ -6,7 +6,8 @@ let game = {
     hmoves: 0,
     fmoves: 1,
     moves: [],
-    in_check: false
+    check_white: false,
+    check_black: false
 };
 
 const startpos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -115,7 +116,7 @@ function create_squares() {
                     make_move(move);
                 }
                 else {
-                    console.error('Invalid move');
+                    //console.error('Invalid move');
                 }
             });
 
@@ -230,7 +231,7 @@ function make_move(move) {
         }
     }
     // If this move is en passant
-    else if (piece.toLowerCase() == 'p' && dest == game.ep_square) {
+    if (piece.toLowerCase() == 'p' && dest == game.ep_square) {
         let coords = to_coords(game.ep_square);
         // Remove the captured pawn
         remove_piece(to_square(coords.file, coords.rank + (game.turn == 'w' ? -1 : 1)));
@@ -258,7 +259,14 @@ function make_move(move) {
     }
 
     // Switch colors
-    game.turn = game.turn == 'w' ? 'b' : 'w';
+    let turn = game.turn == 'w' ? 'b' : 'w';
+
+    game.turn = 'w';
+    game.check_white = in_check();
+    game.turn = 'b';
+    game.check_black = in_check();
+
+    game.turn = turn;
 }
 
 function undo_last_move() {
@@ -293,6 +301,41 @@ function has_black_piece(square) {
     }
 }
 
+function in_check() {
+    // Find the king
+    let king = '';
+    for (let i = 0; i < 8 && king == ''; i++) {
+        for (let j = 0; j < 8 && king == ''; j++) {
+            if (get_piece(to_square(j, i)) == (game.turn == 'w' ? 'K' : 'k')) {
+                king = to_square(j, i);
+            }
+        }
+    }
+
+    // Loop over every piece and check if it can capture the king
+    game.turn = game.turn == 'w' ? 'b' : 'w';
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            let square = to_square(j, i);
+            if (get_piece(square) != null) {
+                let move = square + king;
+                // If its a pawn and the king is on the 8th rank
+                if (get_piece(square).toLowerCase() == 'p' && to_coords(king).rank == (game.turn == 'w' ? 7 : 0)) {
+                    // Promotion piece must be specified
+                    move += 'q';
+                }
+                if (valid_move(move)) {
+                    game.turn = game.turn == 'w' ? 'b' : 'w';
+                    return true;
+                }
+            }
+        }
+    }
+    game.turn = game.turn == 'w' ? 'b' : 'w';
+
+    return false;
+}
+
 function valid_move(move) {
     if (move.length != 4 && move.length != 5) {
         return false;
@@ -310,7 +353,7 @@ function valid_move(move) {
         || from.rank < 0 || from.rank >= 8
         || to.file < 0 || to.file >= 8
         || to.rank < 0 || to.rank >= 8) {
-        console.error('Coordinate out of range');
+        //console.error('Coordinate out of range');
         return false;
     }
 
@@ -319,21 +362,21 @@ function valid_move(move) {
 
     // If there is no piece on the start square
     if (get_piece(start) == null) {
-        console.error('No piece on', start);
+        //console.error('No piece on', start);
         return false;
     }
 
     // If the start square has the wrong piece color
     if ((has_black_piece(start) && game.turn != 'b')
         || (has_white_piece(start) && game.turn != 'w')) {
-        console.error('Wrong piece color');
+        //console.error('Wrong piece color');
         return false;
     }
 
     // If both squares are occupied by pieces of the same color
     if (has_black_piece(start) && has_black_piece(dest)
         || has_white_piece(start) && has_white_piece(dest)) {
-        console.error('Cannot capture own pieces');
+        //console.error('Cannot capture own pieces');
         return false;
     }
 
@@ -370,7 +413,17 @@ function valid_move(move) {
         }
     }
 
-    // TODO: Check if move leaves king in check
+    // Check if move leaves king in check
+    if (get_piece(dest) == null || get_piece(dest).toLowerCase() != 'k') {
+        make_move(move);
+        game.turn = game.turn == 'w' ? 'b' : 'w';
+        if (game.turn == 'w' ? game.check_white : game.check_black) {
+            undo_last_move();
+            //console.error('Must protect king');
+            return false;
+        }
+        undo_last_move();
+    }
 
     return true;
 }
@@ -442,17 +495,19 @@ function valid_king_move(move) {
     let from = to_coords(move.slice(0, 2));
     let to = to_coords(move.slice(2, 4));
 
-    // Castling kingside
-    if (move == (game.turn == 'w' ? 'e1g1' : 'e8g8')
-        && game.castling_rights.indexOf(game.turn == 'w' ? 'K' : 'k') != -1
-        && valid_rook_move(game.turn == 'w' ? 'e1h1' : 'e8h8')) {
-        return true;
-    }
-    // Castling queenside
-    if (move == (game.turn == 'w' ? 'e1c1' : 'e8c8')
-        && game.castling_rights.indexOf(game.turn == 'w' ? 'Q' : 'q') != -1
-        && valid_rook_move(game.turn == 'w' ? 'e1b1' : 'e8b8')) {
-        return true;
+    if (!(game.turn == 'w' ? game.check_white : game.check_black)) {
+        // Castling kingside
+        if (move == (game.turn == 'w' ? 'e1g1' : 'e8g8')
+            && game.castling_rights.indexOf(game.turn == 'w' ? 'K' : 'k') != -1
+            && valid_rook_move(game.turn == 'w' ? 'e1h1' : 'e8h8')) {
+            return true;
+        }
+        // Castling queenside
+        if (move == (game.turn == 'w' ? 'e1c1' : 'e8c8')
+            && game.castling_rights.indexOf(game.turn == 'w' ? 'Q' : 'q') != -1
+            && valid_rook_move(game.turn == 'w' ? 'e1b1' : 'e8b8')) {
+            return true;
+        }
     }
 
     // Normal move
