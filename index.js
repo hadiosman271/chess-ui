@@ -1,3 +1,4 @@
+const startpos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 // State of the game
 let game = {
     turn: 'w',
@@ -6,11 +7,11 @@ let game = {
     hmoves: 0,
     fmoves: 1,
     moves: [],
+    legal_moves: [],
     check_white: false,
-    check_black: false
+    check_black: false,
+    fen: startpos
 };
-
-const startpos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 // Converts coordinates to a square
 function to_square(file, rank) {
@@ -114,6 +115,17 @@ function create_squares() {
                 }
                 if (valid_move(move)) {
                     make_move(move);
+                    update_legal_moves();
+                    if (game.legal_moves.length == 0) {
+                        let outcome = document.createElement('p');
+                        if (game.turn == 'w' ? game.check_white : game.check_black) {
+                            outcome.innerHTML = 'Checkmate';
+                        }
+                        else {
+                            outcome.innerHTML = 'Stalemate';
+                        }
+                        document.querySelector('body').appendChild(outcome);
+                    }
                 }
                 else {
                     //console.error('Invalid move');
@@ -158,6 +170,7 @@ function load_fen(fen) {
     }
 
     // Set the game state
+    game.fen = fen;
     game.turn = part[1];
     game.castling_rights = part[2];
     game.ep_square = part[3];
@@ -167,6 +180,101 @@ function load_fen(fen) {
     // Clear the move list
     game.moves = [];
     document.getElementById('move-list').innerHTML = '';
+}
+
+function update_legal_moves() {
+    game.legal_moves = [];
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            let start = to_square(j, i);
+            let piece = get_piece(start);
+            if (game.turn == 'w' ? has_white_piece(start) : has_black_piece(start)) {
+                switch (piece.toLowerCase()) {
+                case 'q':
+                case 'r':
+                    for (let file = 0; file < 8; file++) {
+                        if (valid_move(start + to_square(file, i))) {
+                            game.legal_moves.push(start + to_square(file, i));
+                        }
+                    }
+                    for (let rank = 0; rank < 8; rank++) {
+                        if (valid_move(start + to_square(j, rank))) {
+                            game.legal_moves.push(start + to_square(j, rank));
+                        }
+                    }
+                    if (piece.toLowerCase() != 'q') {
+                        break;
+                    }
+                case 'b':
+                    for (let file = j + 1, rank = i + 1;
+                        file < 8 && rank < 8; file++, rank++) {
+                        if (valid_move(start + to_square(file, rank))) {
+                            game.legal_moves.push(start + to_square(file, rank));
+                        }
+                    }
+                    for (let file = j - 1, rank = i + 1;
+                        file >= 0 && rank < 8; file--, rank++) {
+                        if (valid_move(start + to_square(file, rank))) {
+                            game.legal_moves.push(start + to_square(file, rank));
+                        }
+                    }
+                    for (let file = j + 1, rank = i - 1;
+                        file < 8 && rank >= 0; file++, rank--) {
+                        if (valid_move(start + to_square(file, rank))) {
+                            game.legal_moves.push(start + to_square(file, rank));
+                        }
+                    }
+                    for (let file = j - 1, rank = i - 1;
+                        file >= 0 && rank >= 0; file--, rank--) {
+                        if (valid_move(start + to_square(file, rank))) {
+                            game.legal_moves.push(start + to_square(file, rank));
+                        }
+                    }
+                    break;
+                case 'n':
+                    for (let square of [
+                        to_square(j + 1, i + 2), to_square(j - 1, i + 2), to_square(j + 2, i + 1), to_square(j - 2, i + 1),
+                        to_square(j + 1, i - 2), to_square(j - 1, i - 2), to_square(j + 2, i - 1), to_square(j - 2, i - 1)
+                    ]) {
+                        if (valid_move(start + square)) {
+                            game.legal_moves.push(start + square);
+                        }
+                    }
+                    break;
+                case 'p':
+                    let dir = game.turn == 'w' ? 1 : -1;
+                    for (let square of [
+                        to_square(j - 1, i + dir), to_square(j, i + dir), to_square(j + 1, i + dir), to_square(j, i + dir * 2)
+                    ]) {
+                        if (square[1] == (game.turn == 'w' ? '8' : '1')) {
+                            for (let p of 'qrnb') {
+                                if (valid_move(start + square + p)) {
+                                    game.legal_moves.push(start + square + p);
+                                }
+                            }
+                        }
+                        else {
+                            if (valid_move(start + square)) {
+                                game.legal_moves.push(start + square);
+                            }
+                        }
+                    }
+                    break;
+                case 'k':
+                    for (let square of [
+                        to_square(j - 1, i - 1), to_square(j - 1, i), to_square(j - 1, i + 1), to_square(j, i - 1),
+                        to_square(j, i + 1), to_square(j + 1, i - 1), to_square(j + 1, i), to_square(j + 1, i + 1),
+                        to_square(j - 2, i), to_square(j + 2, i)
+                    ]) {
+                        if (valid_move(start + square)) {
+                            game.legal_moves.push(start + square);
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+    }
 }
 
 function make_move(move) {
@@ -275,7 +383,7 @@ function undo_last_move() {
 
     // Replay the game from the starting position
     let moves = game.moves;
-    load_fen(startpos);
+    load_fen(game.fen);
     for (let move of moves) {
        make_move(move);
     }
@@ -592,8 +700,5 @@ function valid_pawn_move(move) {
 }
 
 create_squares();
-load_fen(startpos);
-// let moves = ["e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "f8c5"];
-// for (let move of moves) {
-//     make_move(move);
-// }
+load_fen(game.fen);
+update_legal_moves();
