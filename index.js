@@ -67,9 +67,21 @@ function place_piece(piece, square) {
     img.addEventListener('dragstart', function (e) {
         this.style.opacity = '0.4';
         e.dataTransfer.setData('text', e.target.id);
+
+        for (let move of game.legal_moves) {
+            if (move.slice(0, 2) == e.target.id.slice(-2, e.target.id.length)) {
+                document.getElementById('square-' + move.slice(2, 4)).style.backgroundColor = '#637d3c9f';
+            }
+        }
     });
     img.addEventListener('dragend', function (e) {
         this.style.opacity = '1';
+
+        for (let i = 0; i < 8; i++) {
+            for (let j = 0; j < 8; j++) {
+                document.getElementById('square-' + to_square(j, i)).style.backgroundColor = 'transparent';
+            }
+        }
     });
 
     document.getElementById('square-' + square).appendChild(img);
