@@ -1,6 +1,6 @@
-const startpos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 // State of the game
 let game = {
+    start_fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
     turn: 'w',
     ep_square: '-',
     castling_rights: 'KQkq',
@@ -9,8 +9,7 @@ let game = {
     moves: [],
     legal_moves: [],
     check_white: false,
-    check_black: false,
-    fen: startpos
+    check_black: false
 };
 
 // Converts coordinates to a square
@@ -32,9 +31,9 @@ function to_coords(square) {
     }
 }
 
-// Returns the piece currently on the square
-function get_piece(square) {
-    let piece = document.getElementById('piece-' + square);
+// Returns the piece currently on the square or null if empty
+function get_piece(file, rank) {
+    let piece = document.getElementById('piece-' + to_square(file, rank));
     if (piece != null) {
         piece = piece.getAttribute('src').slice(-6, -4);
         // White is uppercase, black is lowercase
@@ -48,51 +47,13 @@ function get_piece(square) {
     return null;
 }
 
-// Places a piece on a square
-function place_piece(piece, square) {
-    let color;
-    if (piece === piece.toLowerCase()) {
-        color = 'b';
-    }
-    else if (piece === piece.toUpperCase()) {
-        color = 'w';
-    }
-
-    img = document.createElement('img');
-    img.setAttribute('class', 'piece');
-    img.setAttribute('src', 'assets/cburnett/' + color + piece.toUpperCase() + '.svg');
-    img.setAttribute('id', 'piece-' + square);
-    img.setAttribute('draggable', 'true');
-
-    img.addEventListener('dragstart', function (e) {
-        this.style.opacity = '0.4';
-        e.dataTransfer.setData('text', e.target.id);
-
-        for (let move of game.legal_moves) {
-            if (move.slice(0, 2) == e.target.id.slice(-2, e.target.id.length)) {
-                document.getElementById('square-' + move.slice(2, 4)).style.backgroundColor = '#637d3c9f';
-            }
-        }
-    });
-    img.addEventListener('dragend', function (e) {
-        this.style.opacity = '1';
-
-        for (let i = 0; i < 8; i++) {
-            for (let j = 0; j < 8; j++) {
-                document.getElementById('square-' + to_square(j, i)).style.backgroundColor = 'transparent';
-            }
-        }
-    });
-
-    document.getElementById('square-' + square).appendChild(img);
-}
-
-// Removes the piece on the square
-function remove_piece(square) {
-    let piece = document.getElementById('piece-' + square);
+function get_color(file, rank) {
+    let piece = get_piece(file, rank);
     if (piece != null) {
-        piece.remove();
+        return piece == piece.toUpperCase() ? 'w' : 'b';
     }
+
+    return '';
 }
 
 // Initalizes all squares on the board
@@ -115,32 +76,22 @@ function create_squares() {
                 e.preventDefault();
                 let id = e.dataTransfer.getData("text");
                 let move = id.slice(-2, id.length) + e.target.id.slice(-2, e.target.id.length);
-                
+                let from = to_coords(move.slice(0, 2));
+                let to = to_coords(move.slice(2, 4));
+
                 // Handle promotion
-                if (get_piece(move.slice(0, 2)).toLowerCase() == 'p'
-                    && move[3] == (game.turn == 'w' ? '8' : '1')) {
+                let piece = get_piece(from.file, from.rank);
+                if (piece != null && piece.toLowerCase() == 'p'
+                    && to.rank == (game.turn == 'w' ? 7 : 0)) {
                     for (let p of 'rnbq') {
-                        if (document.getElementById(p).checked) {
+                        if (document.getElementById('promote-' + p).checked) {
                             move += p;
                         }
                     }
                 }
-                if (valid_move(move)) {
+                if (game.legal_moves.includes(move)) {
                     make_move(move);
                     update_legal_moves();
-                    if (game.legal_moves.length == 0) {
-                        let outcome = document.createElement('p');
-                        if (game.turn == 'w' ? game.check_white : game.check_black) {
-                            outcome.innerHTML = 'Checkmate';
-                        }
-                        else {
-                            outcome.innerHTML = 'Stalemate';
-                        }
-                        document.querySelector('body').appendChild(outcome);
-                    }
-                }
-                else {
-                    //console.error('Invalid move');
                 }
             });
 
@@ -149,17 +100,67 @@ function create_squares() {
     }
 }
 
-function load_fen(fen) {
-    // TODO: validate FEN before loading
+// Places a piece on a square
+function place_piece(piece, file, rank) {
+    let color;
+    if (piece == piece.toLowerCase()) {
+        color = 'b';
+    }
+    else if (piece == piece.toUpperCase()) {
+        color = 'w';
+    }
 
+    img = document.createElement('img');
+    img.setAttribute('class', 'piece');
+    img.setAttribute('src', 'assets/cburnett/' + color + piece.toUpperCase() + '.svg');
+    img.setAttribute('id', 'piece-' + to_square(file, rank));
+    img.setAttribute('draggable', 'true');
+
+    img.addEventListener('dragstart', function (e) {
+        this.style.opacity = '0.4';
+        e.dataTransfer.setData('text', e.target.id);
+
+        for (let move of game.legal_moves) {
+            if (move.slice(0, 2) == e.target.id.slice(-2, e.target.id.length)) {
+                let to = to_coords(move.slice(2, 4));
+                let color = '#637d3c9f'; // green
+                if (get_piece(to.file, to.rank) != null || move.slice(2, 4) == game.ep_square) {
+                    color = '#b02a2a9f'; // red
+                }
+                document.getElementById('square-' + move.slice(2, 4)).style.backgroundColor = color;
+            }
+        }
+    });
+    img.addEventListener('dragend', function (e) {
+        this.style.opacity = '1';
+
+        for (let i = 0; i < 8; i++) {
+            for (let j = 0; j < 8; j++) {
+                document.getElementById('square-' + to_square(j, i)).style.backgroundColor = 'transparent';
+            }
+        }
+    });
+
+    document.getElementById('square-' + to_square(file, rank)).appendChild(img);
+}
+
+// Removes the piece on the square
+function remove_piece(file, rank) {
+    let piece = document.getElementById('piece-' + to_square(file, rank));
+    if (piece != null) {
+        piece.remove();
+    }
+}
+
+function load_fen(fen) {
     // Clear the board
     for (let i = 0; i < 8; i++) {
         for (let j = 0; j < 8; j++) {
-            remove_piece(to_square(i, j));
+            remove_piece(i, j);
         }
     }
 
-    // Split the FEN into its sections
+    // Split the FEN leto its sections
     let part = fen.split(' ');
 
     let file = 0;
@@ -167,7 +168,7 @@ function load_fen(fen) {
     for (let i = 0; i < part[0].length && rank >= 0; i++) {
         // If its a piece letter, place the piece
         if ('rnbqkp'.indexOf(fen[i].toLowerCase()) != -1) {
-            place_piece(fen[i], to_square(file++, rank));
+            place_piece(fen[i], file++, rank);
         }
         // If its a number, skip that many squares
         else if (fen.charCodeAt(i) - '0'.charCodeAt(0) > 0
@@ -194,136 +195,450 @@ function load_fen(fen) {
     document.getElementById('move-list').innerHTML = '';
 }
 
+// Updates the list of legal moves for the current color
 function update_legal_moves() {
     game.legal_moves = [];
+    // For every piece of the current color
     for (let i = 0; i < 8; i++) {
         for (let j = 0; j < 8; j++) {
-            let start = to_square(j, i);
-            let piece = get_piece(start);
-            if (game.turn == 'w' ? has_white_piece(start) : has_black_piece(start)) {
-                switch (piece.toLowerCase()) {
-                case 'q':
+            if (get_color(j, i) == game.turn) {
+                switch (get_piece(j, i).toLowerCase()) {
                 case 'r':
-                    for (let file = 0; file < 8; file++) {
-                        if (valid_move(start + to_square(file, i))) {
-                            game.legal_moves.push(start + to_square(file, i));
-                        }
-                    }
-                    for (let rank = 0; rank < 8; rank++) {
-                        if (valid_move(start + to_square(j, rank))) {
-                            game.legal_moves.push(start + to_square(j, rank));
-                        }
-                    }
-                    if (piece.toLowerCase() != 'q') {
-                        break;
-                    }
-                case 'b':
-                    for (let file = j + 1, rank = i + 1;
-                        file < 8 && rank < 8; file++, rank++) {
-                        if (valid_move(start + to_square(file, rank))) {
-                            game.legal_moves.push(start + to_square(file, rank));
-                        }
-                    }
-                    for (let file = j - 1, rank = i + 1;
-                        file >= 0 && rank < 8; file--, rank++) {
-                        if (valid_move(start + to_square(file, rank))) {
-                            game.legal_moves.push(start + to_square(file, rank));
-                        }
-                    }
-                    for (let file = j + 1, rank = i - 1;
-                        file < 8 && rank >= 0; file++, rank--) {
-                        if (valid_move(start + to_square(file, rank))) {
-                            game.legal_moves.push(start + to_square(file, rank));
-                        }
-                    }
-                    for (let file = j - 1, rank = i - 1;
-                        file >= 0 && rank >= 0; file--, rank--) {
-                        if (valid_move(start + to_square(file, rank))) {
-                            game.legal_moves.push(start + to_square(file, rank));
-                        }
-                    }
+                    add_rook_moves(j, i);
                     break;
                 case 'n':
-                    for (let square of [
-                        to_square(j + 1, i + 2), to_square(j - 1, i + 2), to_square(j + 2, i + 1), to_square(j - 2, i + 1),
-                        to_square(j + 1, i - 2), to_square(j - 1, i - 2), to_square(j + 2, i - 1), to_square(j - 2, i - 1)
-                    ]) {
-                        if (valid_move(start + square)) {
-                            game.legal_moves.push(start + square);
-                        }
-                    }
+                    add_knight_moves(j, i);
                     break;
-                case 'p':
-                    let dir = game.turn == 'w' ? 1 : -1;
-                    for (let square of [
-                        to_square(j - 1, i + dir), to_square(j, i + dir), to_square(j + 1, i + dir), to_square(j, i + dir * 2)
-                    ]) {
-                        if (square[1] == (game.turn == 'w' ? '8' : '1')) {
-                            for (let p of 'qrnb') {
-                                if (valid_move(start + square + p)) {
-                                    game.legal_moves.push(start + square + p);
-                                }
-                            }
-                        }
-                        else {
-                            if (valid_move(start + square)) {
-                                game.legal_moves.push(start + square);
-                            }
-                        }
-                    }
+                case 'b':
+                    add_bishop_moves(j, i);
+                    break;
+                case 'q':
+                    add_queen_moves(j, i);
                     break;
                 case 'k':
-                    for (let square of [
-                        to_square(j - 1, i - 1), to_square(j - 1, i), to_square(j - 1, i + 1), to_square(j, i - 1),
-                        to_square(j, i + 1), to_square(j + 1, i - 1), to_square(j + 1, i), to_square(j + 1, i + 1),
-                        to_square(j - 2, i), to_square(j + 2, i)
-                    ]) {
-                        if (valid_move(start + square)) {
-                            game.legal_moves.push(start + square);
-                        }
-                    }
+                    add_king_moves(j, i);
+                    break;
+                case 'p':
+                    add_pawn_moves(j, i);
                     break;
                 }
+            }
+        }
+    }
+
+    // Update the status
+    if (game.legal_moves.length == 0) {
+        if (game.turn == 'w' ? game.check_white : game.check_black) {
+            document.getElementById('status').innerHTML = 'Checkmate';
+        }
+        else {
+            document.getElementById('status').innerHTML = 'Stalemate';
+        }
+    }
+    else {
+        document.getElementById('status').innerHTML = (game.turn == 'w' ? 'White' : 'Black') + '\'s turn';
+    }
+}
+
+function in_check() {
+    // Find the king
+    let king = null;
+    for (let i = 0; i < 8 && king == null; i++) {
+        for (let j = 0; j < 8 && king == null; j++) {
+            if (get_piece(j, i) == (game.turn == 'w' ? 'K' : 'k')) {
+                king = { file: j, rank: i };
+            }
+        }
+    }
+    let file = king.file;
+    let rank = king.rank;
+
+    // Check the squares where a piece can check the king
+    // Knight moves
+    let moves = [
+        { file: -2, rank: -1 }, { file: -2, rank: 1 }, { file: -1, rank: -2 }, { file: -1, rank: 2 },
+        { file: 2, rank: -1 }, { file: 2, rank: 1 }, { file: 1, rank: -2 }, { file: 1, rank: 2 }
+    ];
+    for (let move of moves) {
+        let f = file + move.file;
+        let r = rank + move.rank;
+        if (f >= 0 && f < 8 && r >= 0 && r < 8 && get_piece(f, r) == (game.turn == 'w' ? 'n' : 'N')) {
+            return true;
+        }
+    }
+
+    // Rook/Queen moves
+    for (let up = rank + 1; up < 8; up++) {
+        if (get_color(file, up) != game.turn) {
+            if (get_piece(file, up) == (game.turn == 'w' ? 'q' : 'Q')
+                || get_piece(file, up) == (game.turn == 'w' ? 'r' : 'R')) {
+                return true;
+            }
+        }
+        else {
+            break;
+        }
+    }
+    for (let down = rank - 1; down >= 0; down--) {
+        if (get_color(file, down) != game.turn) {
+            if (get_piece(file, down) == (game.turn == 'w' ? 'q' : 'Q')
+                || get_piece(file, down) == (game.turn == 'w' ? 'r' : 'R')) {
+                return true;
+            }
+        }
+        else {
+            break;
+        }
+    }
+    for (let left = file - 1; left >= 0; left--) {
+        if (get_color(left, rank) != game.turn) {
+            if (get_piece(left, rank) == (game.turn == 'w' ? 'q' : 'Q')
+                || get_piece(left, rank) == (game.turn == 'w' ? 'r' : 'R')) {
+                return true;
+            }
+        }
+        else {
+            break;
+        }
+    }
+    for (let right = file + 1; right < 8; right++) {
+        if (get_color(right, rank) != game.turn) {
+            if (get_piece(right, rank) == (game.turn == 'w' ? 'q' : 'Q')
+                || get_piece(right, rank) == (game.turn == 'w' ? 'r' : 'R')) {
+                return true;
+            }
+        }
+        else {
+            break;
+        }
+    }
+
+    // Bishop/Queen moves
+    for (let right = file + 1, up = rank + 1; right < 8 && up < 8; right++, up++) {
+        if (get_color(right, up) != game.turn) {
+            if (get_piece(right, up) == (game.turn == 'w' ? 'q' : 'Q')
+                || get_piece(right, up) == (game.turn == 'w' ? 'b' : 'B')) {
+                return true;
+            }
+        }
+        else {
+            break;
+        }
+    }
+    for (let right = file + 1, down = rank - 1; right < 8 && down >= 0; right++, down--) {
+        if (get_color(right, down) != game.turn) {
+            if (get_piece(right, down) == (game.turn == 'w' ? 'q' : 'Q')
+                || get_piece(right, down) == (game.turn == 'w' ? 'b' : 'B')) {
+                return true;
+            }
+        }
+        else {
+            break;
+        }
+    }
+    for (let left = file - 1, down = rank - 1; left >= 0 && down >= 0; left--, down--) {
+        if (get_color(left, down) != game.turn) {
+            if (get_piece(left, down) == (game.turn == 'w' ? 'q' : 'Q')
+                || get_piece(left, down) == (game.turn == 'w' ? 'b' : 'B')) {
+                return true;
+            }
+        }
+        else {
+            break;
+        }
+    }
+    for (let left = file - 1, up = rank + 1; left >= 0 && up < 8; left--, up++) {
+        if (get_color(left, up) != game.turn) {
+            if (get_piece(left, up) == (game.turn == 'w' ? 'q' : 'Q')
+                || get_piece(left, up) == (game.turn == 'w' ? 'b' : 'B')) {
+                return true;
+            }
+        }
+        else {
+            break;
+        }
+    }
+
+    // Pawn moves
+    moves = [
+        { file: -1, rank: game.turn == 'w' ? 1 : -1}, { file: 1, rank: game.turn == 'w' ? 1 : -1}
+    ];
+    for (let move of moves) {
+        let f = file + move.file;
+        let r = rank + move.rank;
+        if (f >= 0 && f < 8 && r >= 0 && r < 8 && get_piece(f, r) == (game.turn == 'w' ? 'p' : 'P')) {
+            return true;
+        }
+    }
+
+    // King moves
+    moves = [
+        { file: -1, rank: -1 }, { file: -1, rank: 0 }, { file: -1, rank: 1 }, { file: 0, rank: -1 },
+        { file: 0, rank: 1 }, { file: 1, rank: -1 }, { file: 1, rank: 0 }, { file: 1, rank: 1 }
+    ];
+    for (let move of moves) {
+        let f = file + move.file;
+        let r = rank + move.rank;
+        if (f >= 0 && f < 8 && r >= 0 && r < 8 && get_piece(f, r) == (game.turn == 'w' ? 'k' : 'K')) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function add_legal_move(from_file, from_rank, to_file, to_rank, promote = '') {
+    let move = to_square(from_file, from_rank) + to_square(to_file, to_rank) + promote;
+    // Check if move puts king in check
+    // This part slows the program down
+    make_move(move);
+    if (game.turn == 'b' ? !game.check_white : !game.check_black) {
+        game.legal_moves.push(move);
+    }
+    undo_last_move();
+}
+
+function add_rook_moves(file, rank) {
+    // Check all directions until another piece or the end of the board
+    // Up
+    for (let up = rank + 1; up < 8; up++) {
+        if (get_color(file, up) != game.turn) {
+            add_legal_move(file, rank, file, up);
+            if (get_color(file, up) != '') {
+                break;
+            }
+        }
+        else {
+            break;
+        }
+    }
+    // Down
+    for (let down = rank - 1; down >= 0; down--) {
+        if (get_color(file, down) != game.turn) {
+            add_legal_move(file, rank, file, down);
+            if (get_color(file, down) != '') {
+                break;
+            }
+        }
+        else {
+            break;
+        }
+    }
+    // Left
+    for (let left = file - 1; left >= 0; left--) {
+        if (get_color(left, rank) != game.turn) {
+            add_legal_move(file, rank, left, rank);
+            if (get_color(left, rank) != '') {
+                break;
+            }
+        }
+        else {
+            break;
+        }
+    }
+    // Right
+    for (let right = file + 1; right < 8; right++) {
+        if (get_color(right, rank) != game.turn) {
+            add_legal_move(file, rank, right, rank);
+            if (get_color(right, rank) != '') {
+                break;
+            }
+        }
+        else {
+            break;
+        }
+    }
+}
+
+function add_knight_moves(file, rank) {
+    // Knight moves
+    let moves = [
+        { file: -2, rank: -1 }, { file: -2, rank: 1 }, { file: -1, rank: -2 }, { file: -1, rank: 2 },
+        { file: 2, rank: -1 }, { file: 2, rank: 1 }, { file: 1, rank: -2 }, { file: 1, rank: 2 }
+    ];
+    for (let move of moves) {
+        let f = file + move.file;
+        let r = rank + move.rank;
+        if (f >= 0 && f < 8 && r >= 0 && r < 8 && get_color(f, r) != game.turn) {
+            add_legal_move(file, rank, f, r);
+        }
+    }
+}
+
+function add_bishop_moves(file, rank) {
+    // Check diagonals
+    // Up-right
+    for (let right = file + 1, up = rank + 1; right < 8 && up < 8; right++, up++) {
+        if (get_color(right, up) != game.turn) {
+            add_legal_move(file, rank, right, up);
+            if (get_color(right, up) != '') {
+                break;
+            }
+        }
+        else {
+            break;
+        }
+    }
+    // Down-right
+    for (let right = file + 1, down = rank - 1; right < 8 && down >= 0; right++, down--) {
+        if (get_color(right, down) != game.turn) {
+            add_legal_move(file, rank, right, down);
+            if (get_color(right, down) != '') {
+                break;
+            }
+        }
+        else {
+            break;
+        }
+    }
+    // Down-left
+    for (let left = file - 1, down = rank - 1; left >= 0 && down >= 0; left--, down--) {
+        if (get_color(left, down) != game.turn) {
+            add_legal_move(file, rank, left, down);
+            if (get_color(left, down) != '') {
+                break;
+            }
+        }
+        else {
+            break;
+        }
+    }
+    // Up-left
+    for (let left = file - 1, up = rank + 1; left >= 0 && up < 8; left--, up++) {
+        if (get_color(left, up) != game.turn) {
+            add_legal_move(file, rank, left, up);
+            if (get_color(left, up) != '') {
+                break;
+            }
+        }
+        else {
+            break;
+        }
+    }
+}
+
+function add_queen_moves(file, rank) {
+    // Queen moves like a rook and a bishop
+    add_rook_moves(file, rank);
+    add_bishop_moves(file, rank);
+}
+
+// Dosent reject castling if the rook could be captured after (but it should)
+function add_king_moves(file, rank) {
+    // If kingside castling is allowed and not in check
+    if (game.castling_rights.includes(game.turn == 'w' ? 'K' : 'k') && game.turn == 'w' ? !game.check_white : !game.check_white) {
+        if (get_color(file + 1, rank) == '' && get_color(file + 2, rank) == '') {
+            add_legal_move(file, rank, 6, game.turn == 'w' ? 0 : 7);
+        }
+    }
+    // If queenside castling is allowed and not in check
+    if (game.castling_rights.includes(game.turn == 'w' ? 'Q' : 'q') && game.turn == 'w' ? !game.check_white : !game.check_white) {
+        if (get_color(file - 1, rank) == '' && get_color(file - 2, rank) == '') {
+            add_legal_move(file, rank, 2, game.turn == 'w' ? 0 : 7);
+        }
+    }
+
+    let moves = [
+        { file: -1, rank: -1 }, { file: -1, rank: 0 }, { file: -1, rank: 1 }, { file: 0, rank: -1 },
+        { file: 0, rank: 1 }, { file: 1, rank: -1 }, { file: 1, rank: 0 }, { file: 1, rank: 1 }
+    ];
+    for (let move of moves) {
+        let f = file + move.file;
+        let r = rank + move.rank;
+        if (f >= 0 && f < 8 && r >= 0 && r < 8 && get_color(f, r) != game.turn) {
+            add_legal_move(file, rank, f, r);
+        }
+    }
+}
+
+function add_pawn_moves(file, rank) {
+    let other = game.turn == 'w' ? 'b' : 'w';
+    let promote = ['q', 'r', 'n', 'b'];
+    let dir = game.turn == 'w' ? 1 : -1;
+    let r = rank + dir;
+    let ep = to_coords(game.ep_square);
+    ep = ep == null ? { file: -1, rank: -1 } : ep;
+    if (r >= 0 && r < 8) {
+        // Capturing forward and left
+        if (get_color(file - 1, r) == other || (file - 1 == ep.file && r == ep.rank)) {
+            if (r == (game.turn == 'w' ? 7 : 0)) {
+                for (let i = 0; i < promote.length; i++) {
+                    add_legal_move(file, rank, file - 1, r, promote[i]);
+                }
+            }
+            else {
+                add_legal_move(file, rank, file - 1, r);
+            }
+        }
+        // Capturing forward and right
+        if (get_color(file + 1, r) == other || (file + 1 == ep.file && r == ep.rank)) {
+            if (r == (game.turn == 'w' ? 7 : 0)) {
+                for (let i = 0; i < 4; i++) {
+                    add_legal_move(file, rank, file + 1, r, promote[i]);
+                }
+            }
+            else {
+                add_legal_move(file, rank, file + 1, r);
+            }
+        }
+        // Moving forward
+        if (get_color(file, r) == '') {
+            if (r == (game.turn == 'w' ? 7 : 0)) {
+                for (let i = 0; i < 4; i++) {
+                    add_legal_move(file, rank, file, r, promote[i]);
+                }
+            }
+            else {
+                add_legal_move(file, rank, file, r);
+            }
+
+            // Moving twice
+            if (rank == (game.turn == 'w' ? 1 : 6) && get_color(file, rank + dir * 2) == '') {
+                add_legal_move(file, rank, file, rank + dir * 2);
             }
         }
     }
 }
 
 function make_move(move) {
-    let start = move.slice(0, 2);
-    let dest = move.slice(2, 4);
+    let from = to_coords(move.slice(0, 2));
+    let to = to_coords(move.slice(2, 4));
+    let promote = '';
+    if (move.length == 5) {
+        promote = move[4];
+    }
 
-    let piece = get_piece(start);
+    let piece = get_piece(from.file, from.rank);
 
     // Half-move clock resets when a pawn is moved or a piece is captured
-    if (piece.toLowerCase() == 'p' || get_piece(dest) != null || dest == game.ep_square) {
+    if (piece.toLowerCase() == 'p' || get_piece(to.file, to.rank) != null || to == game.ep_square) {
         game.hmoves = 0;
     }
     else {
         game.hmoves++;
     }
 
-    remove_piece(start);
+    remove_piece(from.file, from.rank);
     // If moving the king
     if (piece.toLowerCase() == 'k') {
         // If castling
         if (['e1g1', 'e8g8', 'e1c1', 'e8c8'].indexOf(move) != -1) {
             switch (move) {
             case 'e1g1':
-                remove_piece('h1');
-                place_piece('R', 'f1');
+                remove_piece(7, 0); // h1
+                place_piece('R', 5, 0); // f1
                 break;
             case 'e1c1':
-                remove_piece('a1');
-                place_piece('R', 'd1');
+                remove_piece(0, 0); // a1
+                place_piece('R', 3, 0); // d1
                 break;
             case 'e8g8':
-                remove_piece('h8');
-                place_piece('r', 'f8');
+                remove_piece(7, 7); // h8
+                place_piece('r', 5, 7); // f8
                 break
             case 'e8c8':
-                remove_piece('a8');
-                place_piece('r', 'd8');
+                remove_piece(0, 7); // a8
+                place_piece('r', 3, 7); // d8
                 break;
             }
         }
@@ -335,14 +650,14 @@ function make_move(move) {
     }
     // If a rook is moved for the first time
     else if (piece.toLowerCase() == 'r') {
-        if (start[0] == 'h') {
+        if (from.file == 7) {
             // Remove kingside castling rights
             game.castling_rights = game.castling_rights.replace(new RegExp((game.turn == 'w' ? 'K' : 'k'), 'g'), '');
             if (game.castling_rights == '') {
                 game.castling_rights = '-';
             }
         }
-        else if (start[0] == 'a') {
+        else if (from.file == 0) {
             // Remove queenside castling rights
             game.castling_rights = game.castling_rights.replace(new RegExp((game.turn == 'w' ? 'Q' : 'k'), 'g'), '');
             if (game.castling_rights == '') {
@@ -351,21 +666,29 @@ function make_move(move) {
         }
     }
     // If this move is en passant
-    if (piece.toLowerCase() == 'p' && dest == game.ep_square) {
+    if (piece.toLowerCase() == 'p' && to_square(to.file, to.rank) == game.ep_square) {
         let coords = to_coords(game.ep_square);
         // Remove the captured pawn
-        remove_piece(to_square(coords.file, coords.rank + (game.turn == 'w' ? -1 : 1)));
+        remove_piece(coords.file, coords.rank + (game.turn == 'w' ? -1 : 1));
     }
     else {
-        remove_piece(dest);
+        remove_piece(to.file, to.rank);
     }
     // If this move is a promotion
-    if (move.length == 5) {
+    if (promote != '') {
         // Place the piece the pawn has promoted to
-        place_piece(game.turn == 'w' ? move[4].toUpperCase() : move[4], dest);
+        place_piece(game.turn == 'w' ? promote.toUpperCase() : promote, to.file, to.rank);
     }
     else {
-        place_piece(piece, dest);
+        place_piece(piece, to.file, to.rank);
+    }
+
+    // Update en passant square
+    if (piece.toLowerCase() == 'p' && Math.abs(to.rank - from.rank) == 2) {
+        game.ep_square = to_square(from.file, from.rank + (game.turn == 'w' ? 1 : -1));
+    }
+    else {
+        game.ep_square = '-';
     }
 
     // Update the move list
@@ -395,322 +718,12 @@ function undo_last_move() {
 
     // Replay the game from the starting position
     let moves = game.moves;
-    load_fen(game.fen);
+    load_fen(game.start_fen);
     for (let move of moves) {
        make_move(move);
     }
 }
 
-function has_white_piece(square) {
-    let piece = get_piece(square);
-    if (piece == null) {
-        return false;
-    }
-    else {
-        return piece == piece.toUpperCase();
-    }
-}
-
-function has_black_piece(square) {
-    let piece = get_piece(square);
-    if (piece == null) {
-        return false;
-    }
-    else {
-        return piece == piece.toLowerCase();
-    }
-}
-
-function in_check() {
-    // Find the king
-    let king = '';
-    for (let i = 0; i < 8 && king == ''; i++) {
-        for (let j = 0; j < 8 && king == ''; j++) {
-            if (get_piece(to_square(j, i)) == (game.turn == 'w' ? 'K' : 'k')) {
-                king = to_square(j, i);
-            }
-        }
-    }
-
-    // Loop over every piece and check if it can capture the king
-    game.turn = game.turn == 'w' ? 'b' : 'w';
-    for (let i = 0; i < 8; i++) {
-        for (let j = 0; j < 8; j++) {
-            let square = to_square(j, i);
-            if (get_piece(square) != null) {
-                let move = square + king;
-                // If its a pawn and the king is on the 8th rank
-                if (get_piece(square).toLowerCase() == 'p' && to_coords(king).rank == (game.turn == 'w' ? 7 : 0)) {
-                    // Promotion piece must be specified
-                    move += 'q';
-                }
-                if (valid_move(move)) {
-                    game.turn = game.turn == 'w' ? 'b' : 'w';
-                    return true;
-                }
-            }
-        }
-    }
-    game.turn = game.turn == 'w' ? 'b' : 'w';
-
-    return false;
-}
-
-function valid_move(move) {
-    if (move.length != 4 && move.length != 5) {
-        return false;
-    }
-    // If the promotion isnt possible
-    if (move.length == 5 && ('rnbq'.indexOf(move[4]) == -1)
-        && get_piece(move.slice(0, 2)).toLowerCase() != 'p') {
-        return false;
-    }
-
-    // If any coordinate is out of range
-    let from = to_coords(move.slice(0, 2));
-    let to = to_coords(move.slice(2, 4));
-    if (from.file < 0 || from.file >= 8
-        || from.rank < 0 || from.rank >= 8
-        || to.file < 0 || to.file >= 8
-        || to.rank < 0 || to.rank >= 8) {
-        //console.error('Coordinate out of range');
-        return false;
-    }
-
-    let start = move.slice(0, 2);
-    let dest = move.slice(2, 4);
-
-    // If there is no piece on the start square
-    if (get_piece(start) == null) {
-        //console.error('No piece on', start);
-        return false;
-    }
-
-    // If the start square has the wrong piece color
-    if ((has_black_piece(start) && game.turn != 'b')
-        || (has_white_piece(start) && game.turn != 'w')) {
-        //console.error('Wrong piece color');
-        return false;
-    }
-
-    // If both squares are occupied by pieces of the same color
-    if (has_black_piece(start) && has_black_piece(dest)
-        || has_white_piece(start) && has_white_piece(dest)) {
-        //console.error('Cannot capture own pieces');
-        return false;
-    }
-
-    // Check if move breaks the rules for its piece type
-    switch (get_piece(start).toLowerCase()) {
-    case 'r':
-        if (!valid_rook_move(move)) {
-            return false;
-        }
-        break;
-    case 'n':
-        if (!valid_knight_move(move)) {
-            return false;
-        }
-        break;
-    case 'b':
-        if (!valid_bishop_move(move)) {
-            return false;
-        }
-        break;
-    case 'q':
-        if (!valid_queen_move(move)) {
-            return false;
-        }
-        break;
-    case 'k':
-        if (!valid_king_move(move)) {
-            return false;
-        }
-        break;
-    case 'p':
-        if (!valid_pawn_move(move)) {
-            return false;
-        }
-    }
-
-    // Check if move leaves king in check
-    if (get_piece(dest) == null || get_piece(dest).toLowerCase() != 'k') {
-        make_move(move);
-        game.turn = game.turn == 'w' ? 'b' : 'w';
-        if (game.turn == 'w' ? game.check_white : game.check_black) {
-            undo_last_move();
-            //console.error('Must protect king');
-            return false;
-        }
-        undo_last_move();
-    }
-
-    return true;
-}
-
-function valid_rook_move(move) {
-    let from = to_coords(move.slice(0, 2));
-    let to = to_coords(move.slice(2, 4));
-
-    // If both squares are on the same rank/file,
-        // scan the rank/file for any blocking pieces
-    if (from.file == to.file) {
-        let dir = to.rank > from.rank ? 1 : -1;
-        for (let rank = from.rank + dir; rank != to.rank; rank += dir) {
-            if (get_piece(to_square(from.file, rank)) != null) {
-                return false;
-            }
-        }
-    }
-    else if (from.rank == to.rank) {
-        let dir = to.file > from.file ? 1 : -1;
-        for (let file = from.file + dir; file != to.file; file += dir) {
-            if (get_piece(to_square(file, from.rank)) != null) {
-                return false;
-            }
-        }
-    }
-    else {
-        return false;
-    }
-    return true;
-}
-
-function valid_knight_move(move) {
-    let from = to_coords(move.slice(0, 2));
-    let to = to_coords(move.slice(2, 4));
-
-    return (Math.abs(to.file - from.file) == 1 && Math.abs(to.rank - from.rank) == 2)
-        || (Math.abs(to.file - from.file) == 2 && Math.abs(to.rank - from.rank) == 1);
-}
-
-function valid_bishop_move(move) {
-    let from = to_coords(move.slice(0, 2));
-    let to = to_coords(move.slice(2, 4));
-
-    // If not on the same diagonal
-    if (Math.abs(to.file - from.file) != Math.abs(to.rank - from.rank)) {
-        return false;
-    }
-
-    // Scan the diagonal for any blocking pieces
-    let file_dir = to.file > from.file ? 1 : -1;
-    let rank_dir = to.rank > from.rank ? 1 : -1;
-    for (let file = from.file + file_dir, rank = from.rank + rank_dir;
-        file != to.file && rank != to.rank;
-        file += file_dir, rank += rank_dir) {
-        if (get_piece(to_square(file, rank)) != null) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-function valid_queen_move(move) {
-    return valid_rook_move(move) || valid_bishop_move(move);
-}
-
-function valid_king_move(move) {
-    let from = to_coords(move.slice(0, 2));
-    let to = to_coords(move.slice(2, 4));
-
-    if (!(game.turn == 'w' ? game.check_white : game.check_black)) {
-        // Castling kingside
-        if (move == (game.turn == 'w' ? 'e1g1' : 'e8g8')
-            && game.castling_rights.indexOf(game.turn == 'w' ? 'K' : 'k') != -1
-            && valid_rook_move(game.turn == 'w' ? 'e1h1' : 'e8h8')) {
-            return true;
-        }
-        // Castling queenside
-        if (move == (game.turn == 'w' ? 'e1c1' : 'e8c8')
-            && game.castling_rights.indexOf(game.turn == 'w' ? 'Q' : 'q') != -1
-            && valid_rook_move(game.turn == 'w' ? 'e1b1' : 'e8b8')) {
-            return true;
-        }
-    }
-
-    // Normal move
-    if (Math.abs(to.file - from.file) <= 1 && Math.abs(to.rank - from.rank) <= 1) {
-        return true;
-    }
-
-    return false;
-}
-
-function valid_pawn_move(move) {
-    let from = to_coords(move.slice(0, 2));
-    let to = to_coords(move.slice(2, 4));
-
-    // If the pawn is trying to move backward
-    if (game.turn == 'w' && to.rank < from.rank) {
-        return false;
-    }
-    else if (game.turn == 'b' && to.rank > from.rank) {
-        return false;
-    }
-
-    switch (Math.abs(to.rank - from.rank)) {
-    // One square forward
-    case 1:
-        switch (Math.abs(to.file - from.file)) {
-        // Middle
-        case 0:
-            // If trying to capture forwards
-            if (get_piece(to_square(to.file, to.rank)) != null) {
-                return false;
-            }
-            // If on the 8th rank but no promotion piece is specified
-            else if (to.rank == (game.turn == 'w' ? 7 : 0) && move.length != 5) {
-                return false;
-            }
-            break;
-        // Sides
-        case 1:
-            // If trying to move diagonally without capturing
-            if (get_piece(to_square(to.file, to.rank)) == null) {
-                let ep = to_coords(game.ep_square);
-                // Check if en passant is possible
-                if (ep == null || to.file != ep.file || to.rank != ep.rank) {
-                    return false;
-                }
-            }
-            // If captured to the 8th rank but no promotion piece is specified
-            else if (to.rank == (game.turn == 'w' ? 7 : 0) && move.length != 5) {
-                return false;
-            }
-            break;
-        default:
-            return false;
-        }
-        break;
-    // Two squares forward
-    case 2:
-        // If path isnt blocked
-        if (to.file - from.file == 0 && get_piece(to_square(to.file, to.rank)) == null) {
-            // If not on the 2nd rank
-            if (game.turn == 'w' && from.rank != 1) {
-                return false;
-            }
-            else if (game.turn == 'b' && from.rank != 6) {
-                return false;
-            }
-
-            // Update en passant square
-            let ep = to_coords(move.slice(2, 4));
-            game.ep_square = to_square(ep.file, ep.rank + (game.turn == 'w' ? -1 : 1));
-        }
-        else {
-            return false;
-        }
-        break;
-    default:
-        return false;
-    }
-
-    return true;
-}
-
 create_squares();
-load_fen(game.fen);
+load_fen(game.start_fen);
 update_legal_moves();
