@@ -3,6 +3,5 @@
 A web based ui for chess
 
 ### TODO
-- make it look nicer
 -  display moves in short algebraic notation
--  add buttons for new game and undo
+- fix castling being allowed when rook would be under attack after
