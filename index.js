@@ -192,7 +192,7 @@ function load_fen(fen) {
 
     // Clear the move list
     game.moves = [];
-    document.getElementById('move-list').innerHTML = '';
+    document.getElementById('move-list').innerHTML = 'Moves: ';
 }
 
 // Updates the list of legal moves for the current color
@@ -240,20 +240,8 @@ function update_legal_moves() {
     }
 }
 
-function in_check() {
-    // Find the king
-    let king = null;
-    for (let i = 0; i < 8 && king == null; i++) {
-        for (let j = 0; j < 8 && king == null; j++) {
-            if (get_piece(j, i) == (game.turn == 'w' ? 'K' : 'k')) {
-                king = { file: j, rank: i };
-            }
-        }
-    }
-    let file = king.file;
-    let rank = king.rank;
-
-    // Check the squares where a piece can check the king
+function is_attacked(file, rank) {
+    // Check the squares where pieces can attack from
     // Knight moves
     let moves = [
         { file: -2, rank: -1 }, { file: -2, rank: 1 }, { file: -1, rank: -2 }, { file: -1, rank: 2 },
@@ -551,13 +539,17 @@ function add_queen_moves(file, rank) {
 function add_king_moves(file, rank) {
     // If kingside castling is allowed and not in check
     if (game.castling_rights.includes(game.turn == 'w' ? 'K' : 'k') && game.turn == 'w' ? !game.check_white : !game.check_white) {
-        if (get_color(file + 1, rank) == '' && get_color(file + 2, rank) == '') {
+        // If path is empty and rook wont be attacked after
+        if (get_color(file + 1, rank) == '' && get_color(file + 2, rank) == ''
+            && !is_attacked(5, game.turn == 'w' ? 0 : 7)) {
             add_legal_move(file, rank, 6, game.turn == 'w' ? 0 : 7);
         }
     }
     // If queenside castling is allowed and not in check
     if (game.castling_rights.includes(game.turn == 'w' ? 'Q' : 'q') && game.turn == 'w' ? !game.check_white : !game.check_white) {
-        if (get_color(file - 1, rank) == '' && get_color(file - 2, rank) == '') {
+        // If path is empty and rook wont be attacked after
+        if (get_color(file - 1, rank) == '' && get_color(file - 2, rank) == ''
+            && !is_attacked(3, game.turn == 'w' ? 0 : 7)) {
             add_legal_move(file, rank, 2, game.turn == 'w' ? 0 : 7);
         }
     }
@@ -745,10 +737,24 @@ function make_move(move) {
     // Switch colors
     let turn = game.turn == 'w' ? 'b' : 'w';
 
+    // Find the kings
+    let white_king = null;
+    let black_king = null;
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            if (get_piece(j, i) == 'K') {
+                white_king = { file: j, rank: i };
+            }
+            else if (get_piece(j, i) == 'k') {
+                black_king = { file: j, rank: i };
+            }
+        }
+    }
+
     game.turn = 'w';
-    game.check_white = in_check();
+    game.check_white = is_attacked(white_king.file, white_king.rank);
     game.turn = 'b';
-    game.check_black = in_check();
+    game.check_black = is_attacked(black_king.file, black_king.rank);
 
     game.turn = turn;
 }
