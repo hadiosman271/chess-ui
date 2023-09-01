@@ -8,26 +8,30 @@
         <title>Chess</title>
     </head>
     <body>
-        <div id="board"></div>
+        <div id="game">
+            <button id="new-game">New Game</button>
+            <p id="status"></p>
+            <button id="undo">Undo</button>
 
-        <div>
-            <p>Promote to:</p>
-            <input checked type="radio" id="promote-q" name="promote-to" value="q">
-            <label for="promote-q">Queen</label>
-        
-            <input type="radio" id="promote-r" name="promote-to" value="r">
-            <label for="promote-r">Rook</label>
-        
-            <input type="radio" id="promote-n" name="promote-to" value="n">
-            <label for="promote-n">Knight</label>
-        
-            <input type="radio" id="promote-b" name="promote-to" value="b">
-            <label for="promote-b">Bishop</label>
+            <div id="board"></div>
+
+            <div>
+                <p>Promote to:</p>
+                <input checked type="radio" class="promote" id="promote-q" name="promote-to" value="q">
+                <label for="promote-q">Queen</label>
+            
+                <input type="radio" class="promote" id="promote-r" name="promote-to" value="r">
+                <label for="promote-r">Rook</label>
+            
+                <input type="radio" class="promote" id="promote-n" name="promote-to" value="n">
+                <label for="promote-n">Knight</label>
+            
+                <input type="radio" class="promote" id="promote-b" name="promote-to" value="b">
+                <label for="promote-b">Bishop</label>
+            </div>
+
+            <p id="move-list"></p>
         </div>
-
-        <p id="move-list"></p>
-        <p id="status"></p>
-
         <script src="index.js"></script>
     </body>
 </html>
