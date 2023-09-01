@@ -274,6 +274,9 @@ function in_check() {
                 || get_piece(file, up) == (game.turn == 'w' ? 'r' : 'R')) {
                 return true;
             }
+            else if (get_piece(file, up) != null) {
+                break;
+            }
         }
         else {
             break;
@@ -284,6 +287,9 @@ function in_check() {
             if (get_piece(file, down) == (game.turn == 'w' ? 'q' : 'Q')
                 || get_piece(file, down) == (game.turn == 'w' ? 'r' : 'R')) {
                 return true;
+            }
+            else if (get_piece(file, down) != null) {
+                break;
             }
         }
         else {
@@ -296,6 +302,9 @@ function in_check() {
                 || get_piece(left, rank) == (game.turn == 'w' ? 'r' : 'R')) {
                 return true;
             }
+            else if (get_piece(left, rank) != null) {
+                break;
+            }
         }
         else {
             break;
@@ -306,6 +315,9 @@ function in_check() {
             if (get_piece(right, rank) == (game.turn == 'w' ? 'q' : 'Q')
                 || get_piece(right, rank) == (game.turn == 'w' ? 'r' : 'R')) {
                 return true;
+            }
+            else if (get_piece(right, rank) != null) {
+                break;
             }
         }
         else {
@@ -320,6 +332,9 @@ function in_check() {
                 || get_piece(right, up) == (game.turn == 'w' ? 'b' : 'B')) {
                 return true;
             }
+            else if (get_piece(right) != null) {
+                break;
+            }
         }
         else {
             break;
@@ -330,6 +345,9 @@ function in_check() {
             if (get_piece(right, down) == (game.turn == 'w' ? 'q' : 'Q')
                 || get_piece(right, down) == (game.turn == 'w' ? 'b' : 'B')) {
                 return true;
+            }
+            else if (get_piece(right, down) != null) {
+                break;
             }
         }
         else {
@@ -342,6 +360,9 @@ function in_check() {
                 || get_piece(left, down) == (game.turn == 'w' ? 'b' : 'B')) {
                 return true;
             }
+            else if (get_piece(left, down) != null) {
+                break;
+            }
         }
         else {
             break;
@@ -352,6 +373,9 @@ function in_check() {
             if (get_piece(left, up) == (game.turn == 'w' ? 'q' : 'Q')
                 || get_piece(left, up) == (game.turn == 'w' ? 'b' : 'B')) {
                 return true;
+            }
+            else if (get_piece(left, up) != null) {
+                break;
             }
         }
         else {
