@@ -689,6 +689,23 @@ function make_move(move) {
             }
         }
     }
+    // If the king's rook is captured
+    if (to.file == 7 && to.rank == (game.turn == 'w' ? 0 : 7) && get_piece(to.file, to.rank) == (game.turn == 'w' ? 'R' : 'r')) {
+        // Remove kingside castling rights
+        game.castling_rights = game.castling_rights.replace(new RegExp((game.turn == 'w' ? 'K' : 'k'), 'g'), '');
+        if (game.castling_rights == '') {
+            game.castling_rights = '-';
+        }
+    }
+    // If the queen's rook is captured
+    if (to.file == 0 && to.rank == (game.turn == 'w' ? 0 : 7) && get_piece(to.file, to.rank) == (game.turn == 'w' ? 'R' : 'r')) {
+        // Remove queenside castling rights
+        game.castling_rights = game.castling_rights.replace(new RegExp((game.turn == 'w' ? 'Q' : 'k'), 'g'), '');
+        if (game.castling_rights == '') {
+            game.castling_rights = '-';
+        }
+    }
+
     // If this move is en passant
     if (piece.toLowerCase() == 'p' && to_square(to.file, to.rank) == game.ep_square) {
         let coords = to_coords(game.ep_square);
