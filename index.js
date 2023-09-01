@@ -765,6 +765,16 @@ function undo_last_move() {
     }
 }
 
+document.getElementById('new-game').addEventListener('click', function (e) {
+    load_fen(game.start_fen);
+    update_legal_moves();
+});
+
+document.getElementById('undo').addEventListener('click', function (e) {
+    undo_last_move();
+    update_legal_moves();
+});
+
 create_squares();
 load_fen(game.start_fen);
 update_legal_moves();
