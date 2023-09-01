@@ -91,6 +91,13 @@ function create_squares() {
                 }
                 if (game.legal_moves.includes(move)) {
                     make_move(move);
+                    
+                    // Stop highlighting squares
+                    for (let i = 0; i < 8; i++) {
+                        for (let j = 0; j < 8; j++) {
+                            document.getElementById('square-' + to_square(j, i)).style.backgroundColor = 'transparent';
+                        }
+                    }
                     update_legal_moves();
                 }
             });
@@ -134,6 +141,7 @@ function place_piece(piece, file, rank) {
     img.addEventListener('dragend', function (e) {
         this.style.opacity = '1';
 
+        // Stop highlighting squares
         for (let i = 0; i < 8; i++) {
             for (let j = 0; j < 8; j++) {
                 document.getElementById('square-' + to_square(j, i)).style.backgroundColor = 'transparent';
@@ -198,6 +206,7 @@ function load_fen(fen) {
 // Updates the list of legal moves for the current color
 function update_legal_moves() {
     game.legal_moves = [];
+    setTimeout(function () {
     // For every piece of the current color
     for (let i = 0; i < 8; i++) {
         for (let j = 0; j < 8; j++) {
@@ -225,7 +234,7 @@ function update_legal_moves() {
             }
         }
     }
-
+    
     // Update the status
     if (game.legal_moves.length == 0) {
         if (game.turn == 'w' ? game.check_white : game.check_black) {
@@ -238,6 +247,8 @@ function update_legal_moves() {
     else {
         document.getElementById('status').innerHTML = (game.turn == 'w' ? 'White' : 'Black') + '\'s turn';
     }
+
+    }, 0);
 }
 
 function is_attacked(file, rank) {
@@ -771,12 +782,12 @@ function undo_last_move() {
     }
 }
 
-document.getElementById('new-game').addEventListener('click', function (e) {
+document.getElementById('new-game').addEventListener('click', function new_game(e) {
     load_fen(game.start_fen);
     update_legal_moves();
 });
 
-document.getElementById('undo').addEventListener('click', function (e) {
+document.getElementById('undo').addEventListener('click', function undo(e) {
     undo_last_move();
     update_legal_moves();
 });
