@@ -2,6 +2,12 @@ body {
     background-color: gray;
 }
 
+#game {
+    margin: auto;
+    position: relative;
+    width: 500px;
+}
+
 #board {
     width: 500px;
     height: 500px;
@@ -31,9 +37,30 @@ body {
     height: 100%;
 }
 
-#move-list {
-    padding-top: 25px;
+p, button, label {
     text-align: center;
     font-family: Verdana, Geneva, Tahoma, sans-serif;
     font-size: larger;
+    display: inline-block;
+}
+
+#new-game {
+    position: absolute;
+    left: 0px;
+    top: 20px;
+}
+
+#status {
+    width: 500px;
+}
+
+#undo {
+    position: absolute;
+    right: 0px;
+    top: 20px;
+}
+
+.promote {
+    width: 20px;
+    height: 20px;
 }
