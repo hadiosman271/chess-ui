@@ -550,16 +550,18 @@ function add_queen_moves(file, rank) {
 function add_king_moves(file, rank) {
     // If kingside castling is allowed and not in check
     if (game.castling_rights.includes(game.turn == 'w' ? 'K' : 'k') && game.turn == 'w' ? !game.check_white : !game.check_white) {
-        // If path is empty and rook wont be attacked after
+        // If path is empty, rook exists and wont be attacked after
         if (get_color(file + 1, rank) == '' && get_color(file + 2, rank) == ''
+            && get_piece(7, game.turn == 'w' ? 0 : 7) == (game.turn == 'w' ? 'R' : 'r')
             && !is_attacked(5, game.turn == 'w' ? 0 : 7)) {
             add_legal_move(file, rank, 6, game.turn == 'w' ? 0 : 7);
         }
     }
     // If queenside castling is allowed and not in check
     if (game.castling_rights.includes(game.turn == 'w' ? 'Q' : 'q') && game.turn == 'w' ? !game.check_white : !game.check_white) {
-        // If path is empty and rook wont be attacked after
+        // If path is empty, rook exists and wont be attacked after
         if (get_color(file - 1, rank) == '' && get_color(file - 2, rank) == ''
+            && get_piece(0, game.turn == 'w' ? 0 : 7) == (game.turn == 'w' ? 'R' : 'r')
             && !is_attacked(3, game.turn == 'w' ? 0 : 7)) {
             add_legal_move(file, rank, 2, game.turn == 'w' ? 0 : 7);
         }
