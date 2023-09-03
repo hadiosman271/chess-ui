@@ -546,10 +546,9 @@ function add_queen_moves(file, rank) {
     add_bishop_moves(file, rank);
 }
 
-// Dosent reject castling if the rook could be captured after (but it should)
 function add_king_moves(file, rank) {
     // If kingside castling is allowed and not in check
-    if (game.castling_rights.includes(game.turn == 'w' ? 'K' : 'k') && game.turn == 'w' ? !game.check_white : !game.check_white) {
+    if (game.castling_rights.includes(game.turn == 'w' ? 'K' : 'k') && (game.turn == 'w' ? !game.check_white : !game.check_white)) {
         // If path is empty, rook exists and wont be attacked after
         if (get_color(file + 1, rank) == '' && get_color(file + 2, rank) == ''
             && get_piece(7, game.turn == 'w' ? 0 : 7) == (game.turn == 'w' ? 'R' : 'r')
@@ -558,7 +557,7 @@ function add_king_moves(file, rank) {
         }
     }
     // If queenside castling is allowed and not in check
-    if (game.castling_rights.includes(game.turn == 'w' ? 'Q' : 'q') && game.turn == 'w' ? !game.check_white : !game.check_white) {
+    if (game.castling_rights.includes(game.turn == 'w' ? 'Q' : 'q') && (game.turn == 'w' ? !game.check_white : !game.check_white)) {
         // If path is empty, rook exists and wont be attacked after
         if (get_color(file - 1, rank) == '' && get_color(file - 2, rank) == ''
             && get_piece(0, game.turn == 'w' ? 0 : 7) == (game.turn == 'w' ? 'R' : 'r')
